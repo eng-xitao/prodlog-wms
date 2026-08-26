@@ -1,7 +1,10 @@
 -- ProdLog WMS 1.0 - banco INDIVIDUAL de cada empresa
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE IF NOT EXISTS usuarios (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), nome text NOT NULL, email text UNIQUE NOT NULL, password_hash text NOT NULL, cargo text, departamento text, ativo boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS usuarios (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), nome text NOT NULL, email text UNIQUE NOT NULL, password_hash text NOT NULL DEFAULT '', cargo text, departamento text, perfil text, permissoes jsonb NOT NULL DEFAULT '{}'::jsonb, ativo boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS perfil text;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS permissoes jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_hash text NOT NULL DEFAULT '';
 CREATE TABLE IF NOT EXISTS perfis (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), nome text UNIQUE NOT NULL, descricao text, created_at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS permissoes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), modulo text NOT NULL, visualizar boolean NOT NULL DEFAULT false, criar boolean NOT NULL DEFAULT false, editar boolean NOT NULL DEFAULT false, excluir boolean NOT NULL DEFAULT false, aprovar boolean NOT NULL DEFAULT false, UNIQUE(modulo));
 CREATE TABLE IF NOT EXISTS usuario_perfis (usuario_id uuid NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE, perfil_id uuid NOT NULL REFERENCES perfis(id) ON DELETE CASCADE, PRIMARY KEY(usuario_id,perfil_id));
