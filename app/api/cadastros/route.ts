@@ -31,11 +31,12 @@ export async function GET(request: Request) {
     const companyId = url.searchParams.get('companyId');
     const type = table(url.searchParams.get('type') || 'clientes');
     if (!companyId) return NextResponse.json({ error: 'companyId é obrigatório.' }, { status: 400 });
-    const sql = await getTenantDb(companyId); await ensureTables(sql);
-    const rows = await sql(`SELECT id,nome,documento,cidade,contato,email,ativo,status FROM ${tableByType[type]} ORDER BY created_at DESC`);
+    const sql = await getTenantDb(companyId);
+    await ensureTables(sql);
+    const rows = await sql(`SELECT id,nome,documento,cidade,contato,email,ativo FROM ${tableByType[type]} ORDER BY created_at DESC`);
     return NextResponse.json(rows);
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: e?.message || 'Erro ao consultar cadastros.' }, { status: 500 });
   }
 }
 
@@ -44,11 +45,12 @@ export async function POST(request: Request) {
     const body = await request.json();
     const type = table(body.type || 'clientes');
     if (!body.companyId || !body.nome?.trim() || !body.documento?.trim()) return NextResponse.json({ error: 'Empresa, nome/razão social e CPF/CNPJ são obrigatórios.' }, { status: 400 });
-    const sql = await getTenantDb(body.companyId); await ensureTables(sql);
+    const sql = await getTenantDb(body.companyId);
+    await ensureTables(sql);
     const rows = await sql(`INSERT INTO ${tableByType[type]} (nome,documento,cidade,contato,email,ativo) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,nome,documento,cidade,contato,email,ativo,created_at`, [body.nome.trim(), body.documento.trim(), body.cidade || null, body.contato || null, body.email || null, body.ativo !== false]);
     return NextResponse.json(rows[0], { status: 201 });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: e?.message || 'Erro ao cadastrar.' }, { status: 500 });
   }
 }
 
@@ -59,10 +61,11 @@ export async function DELETE(request: Request) {
     const type = table(url.searchParams.get('type') || 'clientes');
     const id = url.searchParams.get('id');
     if (!companyId || !id) return NextResponse.json({ error: 'companyId e id são obrigatórios.' }, { status: 400 });
-    const sql = await getTenantDb(companyId); await ensureTables(sql);
+    const sql = await getTenantDb(companyId);
+    await ensureTables(sql);
     await sql(`DELETE FROM ${tableByType[type]} WHERE id=$1`, [id]);
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: e?.message || 'Erro ao excluir.' }, { status: 500 });
   }
 }
