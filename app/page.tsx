@@ -2,122 +2,151 @@
 
 import { useState } from 'react';
 
-interface Componente {
+interface ItemArmazem {
   id: string;
-  codigo: string;
-  nome: string;
+  sku: string;
+  descricao: string;
+  categoria: string;
   quantidade: number;
-  localizacao: string;
-  status: 'Em Estoque' | 'Em Produção' | 'Baixo Estoque';
+  unidade: string;
+  posicao: string;
+  status: 'Disponível' | 'Estoque Crítico' | 'Bloqueado';
 }
 
-export default function ProdLogDashboard() {
-  const [itens, setItens] = useState<Componente[]>([
-    { id: '1', codigo: 'PRD-001', nome: 'Estrutura Tubolar 40x40', quantidade: 150, localizacao: 'Rua A - A1', status: 'Em Estoque' },
-    { id: '2', codigo: 'PRD-002', nome: 'Chapa Aço Galvanizado 2mm', quantidade: 12, localizacao: 'Rua B - B3', status: 'Baixo Estoque' },
-    { id: '3', codigo: 'PRD-003', nome: 'Perfil U Dobrado 3m', quantidade: 85, localizacao: 'Rua C - A2', status: 'Em Produção' },
+export default function WmsDashboard() {
+  const [itens, setItens] = useState<ItemArmazem[]>([
+    { id: '1', sku: 'WM-1002', descricao: 'Caixa de Papelão Dupla 60x40x40', categoria: 'Embalagens', quantidade: 480, unidade: 'cx', posicao: 'A-01-02-A', status: 'Disponível' },
+    { id: '2', sku: 'WM-3045', descricao: 'Palete PBR Madeira Padronizado', categoria: 'Movimentação', quantidade: 14, unidade: 'un', posicao: 'B-03-01-C', status: 'Estoque Crítico' },
+    { id: '3', sku: 'WM-8821', descricao: 'Filme Stretch Manual 500mm x 25mic', categoria: 'Insumos', quantidade: 120, unidade: 'rl', posicao: 'A-02-04-B', status: 'Disponível' },
+    { id: '4', sku: 'WM-9012', descricao: 'Fita Adesiva Transparente 48mmx100m', categoria: 'Insumos', quantidade: 0, unidade: 'cx', posicao: 'C-01-01-A', status: 'Bloqueado' },
   ]);
 
   const [busca, setBusca] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
-  const [novoItem, setNovoItem] = useState({ codigo: '', nome: '', quantidade: 0, localizacao: '' });
+  const [novoItem, setNovoItem] = useState({ sku: '', descricao: '', categoria: '', quantidade: 0, unidade: 'un', posicao: '' });
 
   const adicionarItem = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!novoItem.nome || !novoItem.codigo) return;
+    if (!novoItem.descricao || !novoItem.sku) return;
     
-    const item: Componente = {
+    const qtd = Number(novoItem.quantidade);
+    const item: ItemArmazem = {
       id: Date.now().toString(),
-      codigo: novoItem.codigo,
-      nome: novoItem.nome,
-      quantidade: Number(novoItem.quantidade),
-      localizacao: novoItem.localizacao || 'Geral',
-      status: Number(novoItem.quantidade) < 20 ? 'Baixo Estoque' : 'Em Estoque',
+      sku: novoItem.sku,
+      descricao: novoItem.descricao,
+      categoria: novoItem.categoria || 'Geral',
+      quantidade: qtd,
+      unidade: novoItem.unidade || 'un',
+      posicao: novoItem.posicao || 'Doca Entrada',
+      status: qtd === 0 ? 'Bloqueado' : qtd < 20 ? 'Estoque Crítico' : 'Disponível',
     };
 
     setItens([...itens, item]);
-    setNovoItem({ codigo: '', nome: '', quantidade: 0, localizacao: '' });
+    setNovoItem({ sku: '', descricao: '', categoria: '', quantidade: 0, unidade: 'un', posicao: '' });
     setModalAberto(false);
   };
 
   const itensFiltrados = itens.filter(i => 
-    i.nome.toLowerCase().includes(busca.toLowerCase()) || 
-    i.codigo.toLowerCase().includes(busca.toLowerCase())
+    i.descricao.toLowerCase().includes(busca.toLowerCase()) || 
+    i.sku.toLowerCase().includes(busca.toLowerCase()) ||
+    i.posicao.toLowerCase().includes(busca.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Topbar */}
-      <header className="border-b border-slate-800 bg-slate-900 px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col font-sans">
+      {/* Topbar Claro */}
+      <header className="border-b border-gray-200 bg-white px-8 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded bg-blue-600 flex items-center justify-center font-bold text-white">P</div>
-          <h1 className="text-xl font-bold tracking-tight text-white">ProdLog WMS</h1>
+          <div className="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-sm">
+            W
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900 leading-tight">ProdLog WMS</h1>
+            <p className="text-xs text-gray-500">Gestão de Armazém e Controle de Estoque</p>
+          </div>
         </div>
         <button 
           onClick={() => setModalAberto(true)}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg text-sm shadow-sm transition-all flex items-center gap-2"
         >
-          + Novo Material
+          <span className="text-lg font-normal">+</span> Dar Entrada de SKU
         </button>
       </header>
 
       {/* Conteúdo Principal */}
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl">
-            <p className="text-sm font-medium text-slate-400">Total de Itens Registrados</p>
-            <p className="text-3xl font-bold mt-2 text-white">{itens.length}</p>
+      <main className="flex-1 p-8 max-w-7xl w-full mx-auto space-y-6">
+        
+        {/* KPI Cards em Estilo Claro ProdOS */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Total de SKUs</span>
+            <p className="text-3xl font-extrabold mt-2 text-gray-900">{itens.length}</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl">
-            <p className="text-sm font-medium text-slate-400">Itens em Alerta de Estoque</p>
-            <p className="text-3xl font-bold mt-2 text-amber-500">
-              {itens.filter(i => i.status === 'Baixo Estoque').length}
+          <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Volume Total em Estocagem</span>
+            <p className="text-3xl font-extrabold mt-2 text-blue-600">
+              {itens.reduce((acc, curr) => acc + curr.quantidade, 0)} <span className="text-xs text-gray-500 font-normal">itens</span>
             </p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl">
-            <p className="text-sm font-medium text-slate-400">Ordens em Produção</p>
-            <p className="text-3xl font-bold mt-2 text-blue-400">
-              {itens.filter(i => i.status === 'Em Produção').length}
+          <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Abaixo da Posição Mínima</span>
+            <p className="text-3xl font-extrabold mt-2 text-amber-500">
+              {itens.filter(i => i.status === 'Estoque Crítico').length}
+            </p>
+          </div>
+          <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Indisponível / Bloqueado</span>
+            <p className="text-3xl font-extrabold mt-2 text-rose-500">
+              {itens.filter(i => i.status === 'Bloqueado').length}
             </p>
           </div>
         </div>
 
-        {/* Tabela de Controle */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-4">
-            <input
-              type="text"
-              placeholder="Buscar por código ou nome do material..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="w-full max-w-md bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500"
-            />
+        {/* Tabela Limpa */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-gray-200 bg-white flex items-center justify-between gap-4">
+            <div className="w-full max-w-md relative">
+              <input
+                type="text"
+                placeholder="Buscar por SKU, descrição ou posição (ex: A-01)..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+              />
+            </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 uppercase text-xs">
+            <table className="w-full text-left text-sm text-gray-600">
+              <thead className="bg-gray-50 text-gray-500 font-semibold text-xs border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3">Código</th>
-                  <th className="px-6 py-3">Descrição / Material</th>
-                  <th className="px-6 py-3">Qtd em Estoque</th>
-                  <th className="px-6 py-3">Localização</th>
-                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3.5">Código SKU</th>
+                  <th className="px-6 py-3.5">Descrição do Item</th>
+                  <th className="px-6 py-3.5">Categoria</th>
+                  <th className="px-6 py-3.5">Saldo Físico</th>
+                  <th className="px-6 py-3.5">Posição / Racks</th>
+                  <th className="px-6 py-3.5">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-gray-100">
                 {itensFiltrados.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="px-6 py-4 font-mono font-medium text-blue-400">{item.codigo}</td>
-                    <td className="px-6 py-4 font-medium text-white">{item.nome}</td>
-                    <td className="px-6 py-4">{item.quantidade} un</td>
-                    <td className="px-6 py-4 text-slate-400">{item.localizacao}</td>
+                  <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-6 py-4 font-mono font-semibold text-blue-600">{item.sku}</td>
+                    <td className="px-6 py-4 font-medium text-gray-900">{item.descricao}</td>
+                    <td className="px-6 py-4 text-gray-500">{item.categoria}</td>
+                    <td className="px-6 py-4 font-medium text-gray-900">
+                      {item.quantidade} <span className="text-xs text-gray-400 font-normal">{item.unidade}</span>
+                    </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        item.status === 'Em Estoque' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                        item.status === 'Baixo Estoque' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                        'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                      <span className="font-mono bg-gray-100 text-gray-700 px-2.5 py-1 rounded border border-gray-200 text-xs">
+                        {item.posicao}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        item.status === 'Disponível' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        item.status === 'Estoque Crítico' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                        'bg-rose-50 text-rose-700 border border-rose-200'
                       }`}>
                         {item.status}
                       </span>
@@ -130,69 +159,102 @@ export default function ProdLogDashboard() {
         </div>
       </main>
 
-      {/* Modal Cadastro */}
+      {/* Modal de Entrada de Material */}
       {modalAberto && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4">
-            <h2 className="text-lg font-bold text-white">Cadastrar Novo Item</h2>
-            <form onSubmit={adicionarItem} className="space-y-3">
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Código</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="EX: PRD-004"
-                  value={novoItem.codigo}
-                  onChange={(e) => setNovoItem({ ...novoItem, codigo: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Nome / Descrição</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="Descrição do material"
-                  value={novoItem.nome}
-                  onChange={(e) => setNovoItem({ ...novoItem, nome: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-gray-200 rounded-xl max-w-lg w-full p-6 shadow-xl space-y-5">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h2 className="text-base font-bold text-gray-900">Dar Entrada de Item no Armazém</h2>
+              <button onClick={() => setModalAberto(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            
+            <form onSubmit={adicionarItem} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Quantidade</label>
+                  <label className="text-xs font-semibold text-gray-600 block mb-1">Código SKU</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="Ex: WM-5011"
+                    value={novoItem.sku}
+                    onChange={(e) => setNovoItem({ ...novoItem, sku: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 block mb-1">Categoria</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Embalagens"
+                    value={novoItem.categoria}
+                    onChange={(e) => setNovoItem({ ...novoItem, categoria: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-600 block mb-1">Descrição do Item</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="Ex: Caixa de Papelão Mod. B"
+                  value={novoItem.descricao}
+                  onChange={(e) => setNovoItem({ ...novoItem, descricao: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 block mb-1">Qtd Entrada</label>
                   <input
                     required
                     type="number"
                     value={novoItem.quantidade}
                     onChange={(e) => setNovoItem({ ...novoItem, quantidade: Number(e.target.value) })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white"
+                    className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-600"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Localização</label>
+                  <label className="text-xs font-semibold text-gray-600 block mb-1">Unidade</label>
+                  <select
+                    value={novoItem.unidade}
+                    onChange={(e) => setNovoItem({ ...novoItem, unidade: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-600"
+                  >
+                    <option value="un">un</option>
+                    <option value="cx">cx</option>
+                    <option value="rl">rl</option>
+                    <option value="kg">kg</option>
+                    <option value="pt">pt</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 block mb-1">Posição (Rack/Rua)</label>
                   <input
                     type="text"
-                    placeholder="Ex: Rua A"
-                    value={novoItem.localizacao}
-                    onChange={(e) => setNovoItem({ ...novoItem, localizacao: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white"
+                    placeholder="Ex: A-01-02-B"
+                    value={novoItem.posicao}
+                    onChange={(e) => setNovoItem({ ...novoItem, posicao: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-600"
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setModalAberto(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
                 >
-                  Salvar
+                  Registrar Entrada
                 </button>
               </div>
             </form>
