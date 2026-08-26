@@ -1,0 +1,22 @@
+'use client';
+
+import { useState } from 'react';
+
+const users = [
+  ['Administrador da Empresa','admin@empresa.com','Administrador','Todos os módulos','Ativo'],
+  ['João Silva','joao@empresa.com','Estoquista','Estoque • Endereçamento • Movimentações','Ativo'],
+  ['Maria Santos','maria@empresa.com','Recebimento','Recebimento • Estoque','Ativo'],
+  ['Carlos Oliveira','carlos@empresa.com','Expedição','Picking • Expedição','Ativo'],
+];
+const modules = ['Dashboard','Recebimento','Estoque','Endereçamento','Movimentações','Picking','Expedição','Inventário','Relatórios','Usuários','Configurações'];
+
+export default function UsersPage() {
+  const [modal, setModal] = useState(false);
+  return <main className="min-h-screen bg-slate-100 text-slate-900 p-4 sm:p-8"><div className="max-w-7xl mx-auto space-y-6">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"><div><div className="text-xs uppercase tracking-[.2em] text-blue-600 font-bold">Belmonte Indústria • Gestão</div><h1 className="text-3xl font-black mt-1">Usuários e permissões</h1><p className="text-slate-500 mt-1">Cadastre funcionários e defina exatamente o que cada um pode acessar.</p></div><div className="flex gap-2"><a href="/" className="border bg-white px-4 py-2.5 rounded-lg text-sm font-semibold">← WMS</a><button onClick={() => setModal(true)} className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold">+ Novo funcionário</button></div></div>
+    <section className="grid grid-cols-2 xl:grid-cols-4 gap-4">{[['Funcionários','14'],['Administradores','2'],['Ativos','13'],['Bloqueados','1']].map(([a,b])=><div key={a} className="bg-white border rounded-2xl p-5"><div className="text-xs uppercase text-slate-400 font-semibold">{a}</div><div className="text-3xl font-black mt-2">{b}</div></div>)}</section>
+    <section className="bg-white border rounded-2xl shadow-sm overflow-hidden"><div className="p-5 border-b"><h2 className="font-bold text-lg">Funcionários da empresa</h2><p className="text-xs text-slate-400 mt-1">O acesso é isolado dentro deste ambiente.</p></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Funcionário','E-mail','Perfil','Permissões','Status','Ações'].map(h=><th key={h} className="text-left px-5 py-3">{h}</th>)}</tr></thead><tbody className="divide-y">{users.map(u=><tr key={u[1]} className="hover:bg-slate-50"><td className="px-5 py-4 font-semibold">{u[0]}</td><td className="px-5 py-4 text-slate-500">{u[1]}</td><td className="px-5 py-4">{u[2]}</td><td className="px-5 py-4 text-xs max-w-xs">{u[3]}</td><td className="px-5 py-4"><span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-semibold">{u[4]}</span></td><td className="px-5 py-4"><button className="text-blue-600 font-semibold">Editar</button></td></tr>)}</tbody></table></div></section>
+    <section className="bg-white border rounded-2xl p-5 shadow-sm"><h2 className="font-bold text-lg">Matriz de permissões</h2><p className="text-sm text-slate-500 mt-1">Controle granular por módulo e ação.</p><div className="overflow-x-auto mt-5"><table className="w-full text-sm"><thead><tr className="border-b"><th className="text-left py-3">Módulo</th>{['Visualizar','Criar','Editar','Excluir','Aprovar'].map(x=><th key={x} className="px-4 py-3">{x}</th>)}</tr></thead><tbody>{modules.map((m,i)=><tr key={m} className="border-b"><td className="py-3 font-medium">{m}</td>{[0,1,2,3,4].map(j=><td key={j} className="text-center"><input type="checkbox" defaultChecked={j===0 || (i%3===0 && j<3)} /></td>)}</tr>)}</tbody></table></div></section>
+    {modal && <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"><div className="bg-white rounded-2xl w-full max-w-xl p-6"><h2 className="text-xl font-bold">Novo funcionário</h2><div className="grid sm:grid-cols-2 gap-4 mt-5">{['Nome completo','E-mail','CPF','Cargo','Perfil de acesso','Status'].map(f=><label key={f} className="text-sm font-medium text-slate-600">{f}<input className="mt-1 w-full border rounded-lg px-3 py-2.5" placeholder={f}/></label>)}</div><div className="flex justify-end gap-2 mt-6"><button onClick={()=>setModal(false)} className="border px-4 py-2 rounded-lg">Cancelar</button><button onClick={()=>setModal(false)} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">Salvar funcionário</button></div></div></div>}
+  </div></main>;
+}
