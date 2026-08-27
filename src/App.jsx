@@ -6,6 +6,9 @@ import Layout from "./components/Layout";
 import LocalizacoesPage from "./pages/LocalizacoesPage";
 import EstoquePage from "./pages/EstoquePage";
 import MovimentacoesPage from "./pages/MovimentacoesPage";
+import ProdutosPage from "./pages/ProdutosPage";
+import AlmoxarifadosPage from "./pages/AlmoxarifadosPage";
+import FornecedoresPage from "./pages/FornecedoresPage";
 
 function PrivateArea() {
   const { session, loading, profileLoading, subscription } = useAuth();
@@ -27,6 +30,9 @@ function PrivateArea() {
         <Route path="/localizacoes" element={<LocalizacoesPage />} />
         <Route path="/estoque" element={<EstoquePage />} />
         <Route path="/movimentacoes" element={<MovimentacoesPage />} />
+        <Route path="/produtos" element={<ProdutosPage />} />
+        <Route path="/almoxarifados" element={<AlmoxarifadosPage />} />
+        <Route path="/fornecedores" element={<FornecedoresPage />} />
         <Route path="*" element={<Navigate to="/estoque" replace />} />
       </Routes>
     </Layout>

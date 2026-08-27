@@ -5,6 +5,9 @@ const NAV = [
   { to: "/localizacoes", label: "Localizações", icon: "▦" },
   { to: "/estoque", label: "Níveis de Estoque", icon: "▤" },
   { to: "/movimentacoes", label: "Movimentações", icon: "⇄" },
+  { to: "/produtos", label: "Produtos", icon: "◆" },
+  { to: "/almoxarifados", label: "Almoxarifados", icon: "▥" },
+  { to: "/fornecedores", label: "Fornecedores", icon: "◐" },
 ];
 
 export default function Layout({ children }) {
