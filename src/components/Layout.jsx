@@ -8,7 +8,7 @@ const NAV = [
 ];
 
 export default function Layout({ children }) {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, impersonation, stopImpersonating } = useAuth();
   const navigate = useNavigate();
 
   async function handleSignOut() {
@@ -38,12 +38,29 @@ export default function Layout({ children }) {
           <button style={styles.signOutBtn} onClick={handleSignOut} type="button">Sair</button>
         </div>
       </aside>
-      <main style={styles.main}>{children}</main>
+      <main style={styles.main}>
+        {impersonation && (
+          <div style={styles.impersonationBanner}>
+            <span>👁 Você está vendo como <strong>{impersonation.companies?.name ?? "essa empresa"}</strong> — modo suporte.</span>
+            <button style={styles.impersonationBtn} onClick={stopImpersonating} type="button">Sair desse modo</button>
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }
 
 const styles = {
+  impersonationBanner: {
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+    background: "var(--amber)", color: "#FFFFFF", padding: "10px 20px",
+    fontSize: 13, fontWeight: 600, marginBottom: 16, borderRadius: "var(--radius)",
+  },
+  impersonationBtn: {
+    background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.4)", color: "#FFFFFF",
+    borderRadius: "var(--radius)", padding: "6px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+  },
   wrap: { display: "flex", minHeight: "100vh", background: "var(--bg)" },
   sidebar: {
     width: 220, background: "var(--panel)", borderRight: "1px solid var(--line)",
