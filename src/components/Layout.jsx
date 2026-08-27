@@ -8,6 +8,7 @@ const NAV = [
   { to: "/produtos", label: "Produtos", icon: "◆" },
   { to: "/almoxarifados", label: "Almoxarifados", icon: "▥" },
   { to: "/fornecedores", label: "Fornecedores", icon: "◐" },
+  { to: "/assinatura", label: "Assinatura", icon: "◈" },
 ];
 
 export default function Layout({ children }) {

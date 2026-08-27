@@ -9,6 +9,7 @@ import MovimentacoesPage from "./pages/MovimentacoesPage";
 import ProdutosPage from "./pages/ProdutosPage";
 import AlmoxarifadosPage from "./pages/AlmoxarifadosPage";
 import FornecedoresPage from "./pages/FornecedoresPage";
+import AssinaturaPage from "./pages/AssinaturaPage";
 
 function PrivateArea() {
   const { session, loading, profileLoading, subscription } = useAuth();
@@ -19,21 +20,30 @@ function PrivateArea() {
   if (!session) {
     return <Navigate to="/login" replace />;
   }
-  if (subscription?.subscription_status !== "active") {
-    return <PendingSubscriptionPage />;
-  }
+
+  const isActive = subscription?.subscription_status === "active";
 
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Navigate to="/estoque" replace />} />
-        <Route path="/localizacoes" element={<LocalizacoesPage />} />
-        <Route path="/estoque" element={<EstoquePage />} />
-        <Route path="/movimentacoes" element={<MovimentacoesPage />} />
-        <Route path="/produtos" element={<ProdutosPage />} />
-        <Route path="/almoxarifados" element={<AlmoxarifadosPage />} />
-        <Route path="/fornecedores" element={<FornecedoresPage />} />
-        <Route path="*" element={<Navigate to="/estoque" replace />} />
+        {isActive ? (
+          <>
+            <Route path="/" element={<Navigate to="/estoque" replace />} />
+            <Route path="/localizacoes" element={<LocalizacoesPage />} />
+            <Route path="/estoque" element={<EstoquePage />} />
+            <Route path="/movimentacoes" element={<MovimentacoesPage />} />
+            <Route path="/produtos" element={<ProdutosPage />} />
+            <Route path="/almoxarifados" element={<AlmoxarifadosPage />} />
+            <Route path="/fornecedores" element={<FornecedoresPage />} />
+            <Route path="/assinatura" element={<AssinaturaPage />} />
+            <Route path="*" element={<Navigate to="/estoque" replace />} />
+          </>
+        ) : (
+          <>
+            <Route path="/assinatura" element={<AssinaturaPage />} />
+            <Route path="*" element={<PendingSubscriptionPage />} />
+          </>
+        )}
       </Routes>
     </Layout>
   );
