@@ -18,7 +18,7 @@ import FiscalPage from "./pages/FiscalPage";
 import TransportadorasPage from "./pages/TransportadorasPage";
 
 function PrivateArea() {
-  const { session, loading, profileLoading, subscription } = useAuth();
+  const { session, loading, profileLoading, subscription, profile } = useAuth();
 
   if (loading || profileLoading) {
     return <div style={{ padding: 40 }}>Carregando...</div>;
@@ -27,7 +27,9 @@ function PrivateArea() {
     return <Navigate to="/login" replace />;
   }
 
-  const isActive = subscription?.subscription_status === "active";
+  // Equipe da plataforma (você e seu time) nunca precisa assinar o
+  // próprio sistema — acesso total sempre, independente de plano.
+  const isActive = !!profile?.platform_role || subscription?.subscription_status === "active";
 
   return (
     <Layout>
