@@ -60,16 +60,30 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
+    let loadedUserId = null;
+
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
+
+      // O navegador dispara esse evento de novo toda vez que a aba
+      // volta a ficar visível — mesmo sem o usuário ter mudado. Se já
+      // carregamos o perfil dessa mesma pessoa, não precisa recarregar
+      // do zero.
+      if (session?.user && loadedUserId === session.user.id) {
+        setLoading(false);
+        return;
+      }
+
       if (session?.user) {
         setProfileLoading(true);
         await loadAll(session.user.id);
+        loadedUserId = session.user.id;
         setProfileLoading(false);
       } else {
         setProfile(null);
         setCompany(null);
         setSubscription(null);
+        loadedUserId = null;
         setProfileLoading(false);
       }
       setLoading(false);
