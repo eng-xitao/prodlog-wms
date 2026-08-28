@@ -10,6 +10,12 @@ import ProdutosPage from "./pages/ProdutosPage";
 import AlmoxarifadosPage from "./pages/AlmoxarifadosPage";
 import FornecedoresPage from "./pages/FornecedoresPage";
 import AssinaturaPage from "./pages/AssinaturaPage";
+import RecebimentoPage from "./pages/RecebimentoPage";
+import PickingPage from "./pages/PickingPage";
+import ExpedicaoPage from "./pages/ExpedicaoPage";
+import InventarioPage from "./pages/InventarioPage";
+import FiscalPage from "./pages/FiscalPage";
+import TransportadorasPage from "./pages/TransportadorasPage";
 
 function PrivateArea() {
   const { session, loading, profileLoading, subscription } = useAuth();
@@ -28,15 +34,21 @@ function PrivateArea() {
       <Routes>
         {isActive ? (
           <>
-            <Route path="/" element={<Navigate to="/estoque" replace />} />
+            <Route path="/" element={<Navigate to="/recebimento" replace />} />
+            <Route path="/recebimento" element={<RecebimentoPage />} />
             <Route path="/localizacoes" element={<LocalizacoesPage />} />
             <Route path="/estoque" element={<EstoquePage />} />
             <Route path="/movimentacoes" element={<MovimentacoesPage />} />
+            <Route path="/picking" element={<PickingPage />} />
+            <Route path="/expedicao" element={<ExpedicaoPage />} />
+            <Route path="/inventario" element={<InventarioPage />} />
+            <Route path="/fiscal" element={<FiscalPage />} />
             <Route path="/produtos" element={<ProdutosPage />} />
             <Route path="/almoxarifados" element={<AlmoxarifadosPage />} />
             <Route path="/fornecedores" element={<FornecedoresPage />} />
+            <Route path="/transportadoras" element={<TransportadorasPage />} />
             <Route path="/assinatura" element={<AssinaturaPage />} />
-            <Route path="*" element={<Navigate to="/estoque" replace />} />
+            <Route path="*" element={<Navigate to="/recebimento" replace />} />
           </>
         ) : (
           <>

@@ -2,12 +2,18 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 
 const NAV = [
-  { to: "/localizacoes", label: "Localizações", icon: "▦" },
+  { to: "/recebimento", label: "Recebimento", icon: "◆" },
   { to: "/estoque", label: "Níveis de Estoque", icon: "▤" },
+  { to: "/localizacoes", label: "Endereçamento", icon: "▦" },
   { to: "/movimentacoes", label: "Movimentações", icon: "⇄" },
+  { to: "/picking", label: "Picking", icon: "☑" },
+  { to: "/expedicao", label: "Expedição", icon: "▶" },
+  { to: "/inventario", label: "Inventário", icon: "◎" },
+  { to: "/fiscal", label: "Fiscal / NF-e", icon: "🧾" },
   { to: "/produtos", label: "Produtos", icon: "◆" },
   { to: "/almoxarifados", label: "Almoxarifados", icon: "▥" },
   { to: "/fornecedores", label: "Fornecedores", icon: "◐" },
+  { to: "/transportadoras", label: "Transportadoras", icon: "🚚" },
   { to: "/assinatura", label: "Assinatura", icon: "◈" },
 ];
 
