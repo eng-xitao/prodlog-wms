@@ -20,22 +20,30 @@ export default function ExpedicaoPage() {
 
   async function loadAll() {
     setLoading(true);
-    const [{ data: ords }, { data: carr }, { data: wh }, { data: ships }] = await Promise.all([
-      supabase.from("wms_orders").select("id, code, customers:customer_id (name)").eq("status", "separado"),
-      supabase.from("wms_carriers").select("id, name").eq("active", true).order("name"),
-      supabase.from("warehouses").select("id, name").order("name"),
-      supabase
-        .from("shipments")
-        .select("id, status, created_at, driver_name, vehicle_plate, wms_carriers:carrier_id (name), wms_orders:wms_order_id (code, customers:customer_id (name))")
-        .not("wms_order_id", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(30),
-    ]);
-    setOrders(ords ?? []);
-    setCarriers(carr ?? []);
-    setWarehouses(wh ?? []);
-    setShipments(ships ?? []);
-    setLoading(false);
+    setError("");
+    try {
+      const [{ data: ords, error: e1 }, { data: carr, error: e2 }, { data: wh, error: e3 }, { data: ships, error: e4 }] = await Promise.all([
+        supabase.from("wms_orders").select("id, code, customers:customer_id (name)").eq("status", "separado"),
+        supabase.from("wms_carriers").select("id, name").eq("active", true).order("name"),
+        supabase.from("warehouses").select("id, name").order("name"),
+        supabase
+          .from("shipments")
+          .select("id, status, created_at, driver_name, vehicle_plate, wms_carriers:carrier_id (name), wms_orders:wms_order_id (code, customers:customer_id (name))")
+          .not("wms_order_id", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(30),
+      ]);
+      const firstError = e1 || e2 || e3 || e4;
+      if (firstError) throw firstError;
+      setOrders(ords ?? []);
+      setCarriers(carr ?? []);
+      setWarehouses(wh ?? []);
+      setShipments(ships ?? []);
+    } catch (err) {
+      setError("Não foi possível carregar a tela: " + (err.message ?? "erro desconhecido"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { if (company?.id) loadAll(); }, [company?.id]);

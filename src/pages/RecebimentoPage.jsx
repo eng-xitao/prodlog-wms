@@ -23,21 +23,29 @@ export default function RecebimentoPage() {
 
   async function loadAll() {
     setLoading(true);
-    const [{ data: sup }, { data: prod }, { data: wh }, { data: recs }] = await Promise.all([
-      supabase.from("suppliers").select("id, code, name").order("name"),
-      supabase.from("products").select("id, sku, name, unit").order("name"),
-      supabase.from("warehouses").select("id, name").order("name"),
-      supabase
-        .from("wms_receivings")
-        .select("id, code, document, status, created_at, received_at, suppliers:supplier_id (name), wms_receiving_items (id, product_id, quantity_expected, quantity_received, products:product_id (sku, name, unit))")
-        .order("created_at", { ascending: false })
-        .limit(50),
-    ]);
-    setSuppliers(sup ?? []);
-    setProducts(prod ?? []);
-    setWarehouses(wh ?? []);
-    setReceivings(recs ?? []);
-    setLoading(false);
+    setError("");
+    try {
+      const [{ data: sup, error: e1 }, { data: prod, error: e2 }, { data: wh, error: e3 }, { data: recs, error: e4 }] = await Promise.all([
+        supabase.from("suppliers").select("id, code, name").order("name"),
+        supabase.from("products").select("id, sku, name, unit").order("name"),
+        supabase.from("warehouses").select("id, name").order("name"),
+        supabase
+          .from("wms_receivings")
+          .select("id, code, document, status, created_at, received_at, suppliers:supplier_id (name), wms_receiving_items (id, product_id, quantity_expected, quantity_received, products:product_id (sku, name, unit))")
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ]);
+      const firstError = e1 || e2 || e3 || e4;
+      if (firstError) throw firstError;
+      setSuppliers(sup ?? []);
+      setProducts(prod ?? []);
+      setWarehouses(wh ?? []);
+      setReceivings(recs ?? []);
+    } catch (err) {
+      setError("Não foi possível carregar a tela: " + (err.message ?? "erro desconhecido"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { if (company?.id) loadAll(); }, [company?.id]);

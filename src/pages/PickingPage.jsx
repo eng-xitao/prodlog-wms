@@ -19,20 +19,28 @@ export default function PickingPage() {
 
   async function loadAll() {
     setLoading(true);
-    const [{ data: cust }, { data: prod }, { data: ords }] = await Promise.all([
-      supabase.from("customers").select("id, code, name").order("name"),
-      supabase.from("products").select("id, sku, name, unit").order("name"),
-      supabase
-        .from("wms_orders")
-        .select("id, code, status, created_at, customers:customer_id (name), wms_order_items (id, product_id, quantity, quantity_picked, products:product_id (sku, name, unit))")
-        .in("status", ["pendente", "separando", "separado"])
-        .order("created_at", { ascending: false })
-        .limit(50),
-    ]);
-    setCustomers(cust ?? []);
-    setProducts(prod ?? []);
-    setOrders(ords ?? []);
-    setLoading(false);
+    setError("");
+    try {
+      const [{ data: cust, error: e1 }, { data: prod, error: e2 }, { data: ords, error: e3 }] = await Promise.all([
+        supabase.from("customers").select("id, code, name").order("name"),
+        supabase.from("products").select("id, sku, name, unit").order("name"),
+        supabase
+          .from("wms_orders")
+          .select("id, code, status, created_at, customers:customer_id (name), wms_order_items (id, product_id, quantity, quantity_picked, products:product_id (sku, name, unit))")
+          .in("status", ["pendente", "separando", "separado"])
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ]);
+      const firstError = e1 || e2 || e3;
+      if (firstError) throw firstError;
+      setCustomers(cust ?? []);
+      setProducts(prod ?? []);
+      setOrders(ords ?? []);
+    } catch (err) {
+      setError("Não foi possível carregar a tela: " + (err.message ?? "erro desconhecido"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { if (company?.id) loadAll(); }, [company?.id]);

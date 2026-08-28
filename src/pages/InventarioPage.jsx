@@ -17,9 +17,16 @@ export default function InventarioPage() {
 
   async function loadInventories() {
     setLoading(true);
-    const { data } = await supabase.from("wms_inventories").select("id, code, type, status, created_at").order("created_at", { ascending: false });
-    setInventories(data ?? []);
-    setLoading(false);
+    setError("");
+    try {
+      const { data, error: e } = await supabase.from("wms_inventories").select("id, code, type, status, created_at").order("created_at", { ascending: false });
+      if (e) throw e;
+      setInventories(data ?? []);
+    } catch (err) {
+      setError("Não foi possível carregar a tela: " + (err.message ?? "erro desconhecido"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function loadCounts(invId) {

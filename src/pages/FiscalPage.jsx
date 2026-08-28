@@ -37,13 +37,19 @@ export default function FiscalPage() {
 
   async function loadInvoices() {
     setLoading(true);
-    const { data } = await supabase
-      .from("invoices")
-      .select("id, status, numero, valor_total, danfe_url, created_at, customers:customer_id (name)")
-      .order("created_at", { ascending: false })
-      .limit(30);
-    setInvoices(data ?? []);
-    setLoading(false);
+    try {
+      const { data, error: e } = await supabase
+        .from("invoices")
+        .select("id, status, numero, valor_total, danfe_url, created_at, customers:customer_id (name)")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (e) throw e;
+      setInvoices(data ?? []);
+    } catch (err) {
+      setError("Não foi possível carregar as notas: " + (err.message ?? "erro desconhecido"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { if (company?.id) { loadBaseData(); loadInvoices(); } }, [company?.id]);
