@@ -29,7 +29,7 @@ function PrivateArea() {
 
   // Equipe da plataforma (você e seu time) nunca precisa assinar o
   // próprio sistema — acesso total sempre, independente de plano.
-  const isActive = !!profile?.platform_role || subscription?.subscription_status === "active";
+  const isActive = !!profile?.platform_role || ["active", "vitalicio"].includes(subscription?.subscription_status);
 
   return (
     <Layout>
