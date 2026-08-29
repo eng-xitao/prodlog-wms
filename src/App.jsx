@@ -15,6 +15,9 @@ import PickingPage from "./pages/PickingPage";
 import ExpedicaoPage from "./pages/ExpedicaoPage";
 import InventarioPage from "./pages/InventarioPage";
 import FiscalPage from "./pages/FiscalPage";
+import TabelaFretePage from "./pages/TabelaFretePage";
+import CtePage from "./pages/CtePage";
+import ManifestosPage from "./pages/ManifestosPage";
 import TransportadorasPage from "./pages/TransportadorasPage";
 import VeiculosPage from "./pages/VeiculosPage";
 import MotoristasPage from "./pages/MotoristasPage";
@@ -47,6 +50,9 @@ function PrivateArea() {
             <Route path="/expedicao" element={<ExpedicaoPage />} />
             <Route path="/inventario" element={<InventarioPage />} />
             <Route path="/fiscal" element={<FiscalPage />} />
+            <Route path="/tabela-frete" element={<TabelaFretePage />} />
+            <Route path="/cte" element={<CtePage />} />
+            <Route path="/mdfe" element={<ManifestosPage />} />
             <Route path="/produtos" element={<ProdutosPage />} />
             <Route path="/almoxarifados" element={<AlmoxarifadosPage />} />
             <Route path="/fornecedores" element={<FornecedoresPage />} />

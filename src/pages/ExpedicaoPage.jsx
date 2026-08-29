@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../lib/AuthContext";
 
+const STATUS_LABEL = { aguardando: "Aguardando", em_rota: "Em rota", entregue: "Entregue", tentativa_frustrada: "Tentativa frustrada", devolvido: "Devolvido" };
+const STATUS_COLOR = { aguardando: "var(--text-dim)", em_rota: "#2563EB", entregue: "var(--green)", tentativa_frustrada: "var(--amber)", devolvido: "var(--red)" };
+
 export default function ExpedicaoPage() {
   const { company } = useAuth();
   const [orders, setOrders] = useState([]);
@@ -19,6 +22,13 @@ export default function ExpedicaoPage() {
   const [vehicleId, setVehicleId] = useState("");
   const [driverId, setDriverId] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [expandedId, setExpandedId] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [proof, setProof] = useState(null);
+  const [newEventType, setNewEventType] = useState("em_rota");
+  const [newEventNote, setNewEventNote] = useState("");
+  const [proofForm, setProofForm] = useState({ name: "", document: "" });
 
   async function loadAll() {
     setLoading(true);
@@ -54,6 +64,21 @@ export default function ExpedicaoPage() {
 
   useEffect(() => { if (company?.id) loadAll(); }, [company?.id]);
 
+  async function loadShipmentDetails(shipmentId) {
+    const [{ data: ev }, { data: pf }] = await Promise.all([
+      supabase.from("wms_shipment_events").select("id, event_type, description, occurred_at").eq("shipment_id", shipmentId).order("occurred_at", { ascending: false }),
+      supabase.from("wms_delivery_proofs").select("id, received_by_name, received_by_document, delivered_at").eq("shipment_id", shipmentId).maybeSingle(),
+    ]);
+    setEvents(ev ?? []);
+    setProof(pf ?? null);
+  }
+
+  function toggleExpand(shipment) {
+    if (expandedId === shipment.id) { setExpandedId(null); return; }
+    setExpandedId(shipment.id);
+    loadShipmentDetails(shipment.id);
+  }
+
   async function handleCreate(e) {
     e.preventDefault();
     setError("");
@@ -67,7 +92,7 @@ export default function ExpedicaoPage() {
       .insert({
         company_id: company.id, warehouse_id: warehouseId, wms_order_id: orderId,
         carrier_id: carrierId || null, vehicle_id: vehicleId || null, driver_id: driverId || null,
-        status: "entregue",
+        status: "aguardando",
       })
       .select("id").single();
 
@@ -95,11 +120,33 @@ export default function ExpedicaoPage() {
     await loadAll();
   }
 
+  async function addEvent(shipmentId) {
+    setError("");
+    await supabase.from("wms_shipment_events").insert({
+      company_id: company.id, shipment_id: shipmentId, event_type: newEventType, description: newEventNote || null,
+    });
+    await supabase.from("shipments").update({ status: newEventType }).eq("id", shipmentId);
+    setNewEventNote("");
+    await loadShipmentDetails(shipmentId);
+    await loadAll();
+  }
+
+  async function saveProof(shipmentId) {
+    if (!proofForm.name) { setError("Informe quem recebeu a carga."); return; }
+    setError("");
+    await supabase.from("wms_delivery_proofs").insert({
+      company_id: company.id, shipment_id: shipmentId,
+      received_by_name: proofForm.name, received_by_document: proofForm.document || null,
+    });
+    setProofForm({ name: "", document: "" });
+    await loadShipmentDetails(shipmentId);
+  }
+
   return (
     <div>
       <header style={{ marginBottom: 20 }}>
         <h1 style={styles.title}>Expedição</h1>
-        <p style={styles.subtitle}>Só pedidos já separados aparecem aqui — confirmar já dá baixa no estoque.</p>
+        <p style={styles.subtitle}>Só pedidos já separados aparecem aqui — acompanhe o status até a entrega, com canhoto digital.</p>
       </header>
 
       {error && <div style={styles.error}>{error}</div>}
@@ -123,7 +170,7 @@ export default function ExpedicaoPage() {
           </select>
           <select style={styles.input} value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
             <option value="">Veículo (opcional)...</option>
-            {vehicles.map((v) => <option key={v.id} value={v.id}>{v.plate} {v.model ? `— ${v.model}` : ""}</option>)}
+            {vehicles.map((v) => <option key={v.id} value={v.id}>{v.plate} {v.model && `— ${v.model}`}</option>)}
           </select>
           <select style={styles.input} value={driverId} onChange={(e) => setDriverId(e.target.value)}>
             <option value="">Motorista (opcional)...</option>
@@ -139,21 +186,68 @@ export default function ExpedicaoPage() {
       ) : shipments.length === 0 ? (
         <p style={styles.dim}>Nenhuma expedição registrada ainda.</p>
       ) : (
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
-            <thead><tr><th style={styles.th}>Pedido</th><th style={styles.th}>Cliente</th><th style={styles.th}>Transportadora</th><th style={styles.th}>Motorista/Veículo</th><th style={styles.th}>Quando</th></tr></thead>
-            <tbody>
-              {shipments.map((s) => (
-                <tr key={s.id}>
-                  <td style={styles.td}>{s.wms_orders?.code ?? "—"}</td>
-                  <td style={styles.td}>{s.wms_orders?.customers?.name ?? "—"}</td>
-                  <td style={styles.td}>{s.wms_carriers?.name ?? "—"}</td>
-                  <td style={styles.td}>{s.wms_drivers?.full_name ?? "—"} {s.wms_vehicles?.plate && `/ ${s.wms_vehicles.plate}`}</td>
-                  <td style={styles.td}>{new Date(s.created_at).toLocaleString("pt-BR")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={styles.list}>
+          {shipments.map((s) => (
+            <div key={s.id} style={styles.card}>
+              <div style={styles.cardHeader}>
+                <div>
+                  <strong>{s.wms_orders?.code ?? "—"}</strong>
+                  <span style={styles.dim}> · {s.wms_orders?.customers?.name ?? "—"}</span>
+                </div>
+                <span style={{ ...styles.statusBadge, color: STATUS_COLOR[s.status] }}>{STATUS_LABEL[s.status] ?? s.status}</span>
+              </div>
+              <p style={styles.dim}>
+                {s.wms_carriers?.name ?? "sem transportadora"} · {s.wms_drivers?.full_name ?? "sem motorista"} {s.wms_vehicles?.plate && `/ ${s.wms_vehicles.plate}`}
+              </p>
+              <button style={styles.expandBtn} onClick={() => toggleExpand(s)} type="button">
+                {expandedId === s.id ? "Fechar" : "Ver status e canhoto"}
+              </button>
+
+              {expandedId === s.id && (
+                <div style={styles.detailsBox}>
+                  <p style={styles.detailsLabel}>Linha do tempo</p>
+                  {events.length === 0 ? (
+                    <p style={styles.dim}>Nenhum evento registrado ainda.</p>
+                  ) : (
+                    <ul style={styles.eventList}>
+                      {events.map((ev) => (
+                        <li key={ev.id} style={styles.eventItem}>
+                          <span style={{ color: STATUS_COLOR[ev.event_type] ?? "var(--text)" }}>{STATUS_LABEL[ev.event_type] ?? ev.event_type}</span>
+                          {ev.description && ` — ${ev.description}`}
+                          <span style={styles.dim}> ({new Date(ev.occurred_at).toLocaleString("pt-BR")})</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {s.status !== "entregue" && (
+                    <div style={styles.addEventRow}>
+                      <select style={styles.input} value={newEventType} onChange={(e) => setNewEventType(e.target.value)}>
+                        {Object.entries(STATUS_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                      <input style={styles.input} placeholder="Observação (opcional)" value={newEventNote} onChange={(e) => setNewEventNote(e.target.value)} />
+                      <button style={styles.addBtn} onClick={() => addEvent(s.id)} type="button">Atualizar status</button>
+                    </div>
+                  )}
+
+                  <p style={{ ...styles.detailsLabel, marginTop: 16 }}>Canhoto digital</p>
+                  {proof ? (
+                    <p style={styles.dim}>
+                      Recebido por {proof.received_by_name}{proof.received_by_document && ` (${proof.received_by_document})`} em {new Date(proof.delivered_at).toLocaleString("pt-BR")}
+                    </p>
+                  ) : s.status === "entregue" ? (
+                    <div style={styles.addEventRow}>
+                      <input style={styles.input} placeholder="Nome de quem recebeu" value={proofForm.name} onChange={(e) => setProofForm((p) => ({ ...p, name: e.target.value }))} />
+                      <input style={styles.input} placeholder="CPF/RG (opcional)" value={proofForm.document} onChange={(e) => setProofForm((p) => ({ ...p, document: e.target.value }))} />
+                      <button style={styles.addBtn} onClick={() => saveProof(s.id)} type="button">Salvar canhoto</button>
+                    </div>
+                  ) : (
+                    <p style={styles.dim}>Disponível quando o status virar "Entregue".</p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -165,14 +259,21 @@ const styles = {
   title2: { fontFamily: "var(--font-display)", fontSize: 16, margin: "0 0 12px" },
   subtitle: { color: "var(--text-dim)", fontSize: 13, margin: "6px 0 0" },
   dim: { color: "var(--text-dim)", fontSize: 12.5 },
-  form: { display: "flex", flexDirection: "column", gap: 12, background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: 20, marginBottom: 28, maxWidth: 720 },
+  form: { display: "flex", flexDirection: "column", gap: 12, background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: 20, marginBottom: 28, maxWidth: 780 },
   formTitle: { fontSize: 13, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 4px" },
   row: { display: "flex", gap: 10, flexWrap: "wrap" },
   input: { flex: 1, minWidth: 150, background: "var(--panel-2)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: "9px 10px", color: "var(--text)", fontSize: 13 },
   saveBtn: { background: "var(--amber)", color: "#FFFFFF", border: "none", borderRadius: "var(--radius)", padding: "10px 0", fontWeight: 700, fontSize: 13, cursor: "pointer" },
-  tableWrap: { border: "1px solid var(--line)", borderRadius: "var(--radius)", overflow: "hidden", overflowX: "auto" },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: { textAlign: "left", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--text-dim)", padding: "10px 14px", background: "var(--panel)", borderBottom: "1px solid var(--line)" },
-  td: { padding: "10px 14px", fontSize: 13.5, background: "var(--panel)", borderBottom: "1px solid var(--line)" },
-  error: { background: "rgba(217,105,95,0.12)", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--radius)", padding: "10px 12px", fontSize: 13, marginBottom: 16, maxWidth: 720 },
+  list: { display: "flex", flexDirection: "column", gap: 12, maxWidth: 780 },
+  card: { background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "var(--radius)", padding: 16 },
+  cardHeader: { display: "flex", justifyContent: "space-between", marginBottom: 4 },
+  statusBadge: { fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" },
+  expandBtn: { marginTop: 8, background: "transparent", border: "1px solid var(--line)", color: "var(--text-dim)", borderRadius: "var(--radius)", padding: "6px 14px", fontSize: 12, cursor: "pointer" },
+  detailsBox: { marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" },
+  detailsLabel: { fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 8px" },
+  eventList: { listStyle: "none", padding: 0, margin: "0 0 10px", display: "flex", flexDirection: "column", gap: 4 },
+  eventItem: { fontSize: 12.5 },
+  addEventRow: { display: "flex", gap: 8, flexWrap: "wrap" },
+  addBtn: { background: "var(--panel-2)", border: "1px solid var(--line)", color: "var(--text)", borderRadius: "var(--radius)", padding: "9px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" },
+  error: { background: "rgba(217,105,95,0.12)", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--radius)", padding: "10px 12px", fontSize: 13, marginBottom: 16, maxWidth: 780 },
 };
