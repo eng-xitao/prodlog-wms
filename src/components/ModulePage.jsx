@@ -117,14 +117,25 @@ export default function ModulePage({ table, title, subtitle, fields, emptyLabel,
   async function handleDelete(id) {
     if (!(await confirmDelete(company))) return;
     const { error } = await supabase.from(table).delete().eq("id", id);
-    if (error) setError(error.message);
-    else setRows((r) => r.filter((row) => row.id !== id));
+    if (error) {
+      if (error.code === "23503") {
+        setError("Não é possível excluir — esse registro já está sendo usado em outra parte do sistema (movimentação, pedido, recebimento, etc).");
+      } else {
+        setError(error.message);
+      }
+    } else {
+      setRows((r) => r.filter((row) => row.id !== id));
+    }
   }
 
   async function handleToggleStatus(id, current) {
-    const { error } = await supabase.from(table).update({ [statusField.key]: !current }).eq("id", id);
+    const isTextStatus = statusField.activeValue !== undefined;
+    const next = isTextStatus
+      ? (current === statusField.activeValue ? statusField.inactiveValue : statusField.activeValue)
+      : !current;
+    const { error } = await supabase.from(table).update({ [statusField.key]: next }).eq("id", id);
     if (error) setError(error.message);
-    else setRows((r) => r.map((row) => (row.id === id ? { ...row, [statusField.key]: !current } : row)));
+    else setRows((r) => r.map((row) => (row.id === id ? { ...row, [statusField.key]: next } : row)));
   }
 
   async function handleQuickEdit(id, key, value) {
@@ -236,13 +247,19 @@ export default function ModulePage({ table, title, subtitle, fields, emptyLabel,
                   ))}
                   {statusField && (
                     <td style={styles.td}>
-                      <button
-                        style={{ ...styles.statusBtn, ...(row[statusField.key] ? styles.statusTrue : styles.statusFalse) }}
-                        onClick={() => handleToggleStatus(row.id, row[statusField.key])}
-                        type="button"
-                      >
-                        {row[statusField.key] ? (statusField.trueLabel ?? "Concluído") : (statusField.falseLabel ?? "Pendente")}
-                      </button>
+                      {(() => {
+                        const isTextStatus = statusField.activeValue !== undefined;
+                        const isOn = isTextStatus ? row[statusField.key] === statusField.activeValue : row[statusField.key];
+                        return (
+                          <button
+                            style={{ ...styles.statusBtn, ...(isOn ? styles.statusTrue : styles.statusFalse) }}
+                            onClick={() => handleToggleStatus(row.id, row[statusField.key])}
+                            type="button"
+                          >
+                            {isOn ? (statusField.trueLabel ?? "Concluído") : (statusField.falseLabel ?? "Pendente")}
+                          </button>
+                        );
+                      })()}
                     </td>
                   )}
                   <td style={{ ...styles.td, textAlign: "right", whiteSpace: "nowrap" }}>

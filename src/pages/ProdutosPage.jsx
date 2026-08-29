@@ -15,6 +15,7 @@ export default function ProdutosPage() {
       title="Produtos"
       subtitle="Itens controlados no seu armazém."
       emptyLabel="Nenhum produto cadastrado ainda."
+      statusField={{ key: "status", activeValue: "active", inactiveValue: "inactive", trueLabel: "Ativo", falseLabel: "Inativo" }}
       fields={[
         { key: "sku", label: "SKU", placeholder: "Código único do item", required: true },
         { key: "name", label: "Nome", required: true },
