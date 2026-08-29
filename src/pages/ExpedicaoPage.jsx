@@ -6,6 +6,8 @@ export default function ExpedicaoPage() {
   const { company } = useAuth();
   const [orders, setOrders] = useState([]);
   const [carriers, setCarriers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,31 +16,35 @@ export default function ExpedicaoPage() {
   const [orderId, setOrderId] = useState("");
   const [carrierId, setCarrierId] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
-  const [driverName, setDriverName] = useState("");
-  const [vehiclePlate, setVehiclePlate] = useState("");
+  const [vehicleId, setVehicleId] = useState("");
+  const [driverId, setDriverId] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function loadAll() {
     setLoading(true);
     setError("");
     try {
-      const [{ data: ords, error: e1 }, { data: carr, error: e2 }, { data: wh, error: e3 }, { data: ships, error: e4 }] = await Promise.all([
+      const [{ data: ords, error: e1 }, { data: carr, error: e2 }, { data: wh, error: e3 }, { data: ships, error: e4 }, { data: veh, error: e5 }, { data: drv, error: e6 }] = await Promise.all([
         supabase.from("wms_orders").select("id, code, customers:customer_id (name)").eq("status", "separado"),
         supabase.from("wms_carriers").select("id, name").eq("active", true).order("name"),
         supabase.from("warehouses").select("id, name").order("name"),
         supabase
           .from("shipments")
-          .select("id, status, created_at, driver_name, vehicle_plate, wms_carriers:carrier_id (name), wms_orders:wms_order_id (code, customers:customer_id (name))")
+          .select("id, status, created_at, wms_carriers:carrier_id (name), wms_vehicles:vehicle_id (plate, model), wms_drivers:driver_id (full_name), wms_orders:wms_order_id (code, customers:customer_id (name))")
           .not("wms_order_id", "is", null)
           .order("created_at", { ascending: false })
           .limit(30),
+        supabase.from("wms_vehicles").select("id, plate, model").eq("status", "active").order("plate"),
+        supabase.from("wms_drivers").select("id, full_name").eq("status", "active").order("full_name"),
       ]);
-      const firstError = e1 || e2 || e3 || e4;
+      const firstError = e1 || e2 || e3 || e4 || e5 || e6;
       if (firstError) throw firstError;
       setOrders(ords ?? []);
       setCarriers(carr ?? []);
       setWarehouses(wh ?? []);
       setShipments(ships ?? []);
+      setVehicles(veh ?? []);
+      setDrivers(drv ?? []);
     } catch (err) {
       setError("Não foi possível carregar a tela: " + (err.message ?? "erro desconhecido"));
     } finally {
@@ -60,7 +66,7 @@ export default function ExpedicaoPage() {
       .from("shipments")
       .insert({
         company_id: company.id, warehouse_id: warehouseId, wms_order_id: orderId,
-        carrier_id: carrierId || null, driver_name: driverName || null, vehicle_plate: vehiclePlate || null,
+        carrier_id: carrierId || null, vehicle_id: vehicleId || null, driver_id: driverId || null,
         status: "entregue",
       })
       .select("id").single();
@@ -84,7 +90,7 @@ export default function ExpedicaoPage() {
 
     await supabase.from("wms_orders").update({ status: "expedido" }).eq("id", orderId);
 
-    setOrderId(""); setCarrierId(""); setWarehouseId(""); setDriverName(""); setVehiclePlate("");
+    setOrderId(""); setCarrierId(""); setWarehouseId(""); setVehicleId(""); setDriverId("");
     setSaving(false);
     await loadAll();
   }
@@ -115,8 +121,14 @@ export default function ExpedicaoPage() {
             <option value="">Transportadora (opcional)...</option>
             {carriers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          <input style={styles.input} placeholder="Motorista (opcional)" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
-          <input style={styles.input} placeholder="Placa (opcional)" value={vehiclePlate} onChange={(e) => setVehiclePlate(e.target.value)} />
+          <select style={styles.input} value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
+            <option value="">Veículo (opcional)...</option>
+            {vehicles.map((v) => <option key={v.id} value={v.id}>{v.plate} {v.model ? `— ${v.model}` : ""}</option>)}
+          </select>
+          <select style={styles.input} value={driverId} onChange={(e) => setDriverId(e.target.value)}>
+            <option value="">Motorista (opcional)...</option>
+            {drivers.map((d) => <option key={d.id} value={d.id}>{d.full_name}</option>)}
+          </select>
         </div>
         <button style={styles.saveBtn} type="submit" disabled={saving}>{saving ? "Expedindo..." : "Confirmar expedição"}</button>
       </form>
@@ -129,14 +141,14 @@ export default function ExpedicaoPage() {
       ) : (
         <div style={styles.tableWrap}>
           <table style={styles.table}>
-            <thead><tr><th style={styles.th}>Pedido</th><th style={styles.th}>Cliente</th><th style={styles.th}>Transportadora</th><th style={styles.th}>Motorista/Placa</th><th style={styles.th}>Quando</th></tr></thead>
+            <thead><tr><th style={styles.th}>Pedido</th><th style={styles.th}>Cliente</th><th style={styles.th}>Transportadora</th><th style={styles.th}>Motorista/Veículo</th><th style={styles.th}>Quando</th></tr></thead>
             <tbody>
               {shipments.map((s) => (
                 <tr key={s.id}>
                   <td style={styles.td}>{s.wms_orders?.code ?? "—"}</td>
                   <td style={styles.td}>{s.wms_orders?.customers?.name ?? "—"}</td>
                   <td style={styles.td}>{s.wms_carriers?.name ?? "—"}</td>
-                  <td style={styles.td}>{s.driver_name ?? "—"} {s.vehicle_plate && `/ ${s.vehicle_plate}`}</td>
+                  <td style={styles.td}>{s.wms_drivers?.full_name ?? "—"} {s.wms_vehicles?.plate && `/ ${s.wms_vehicles.plate}`}</td>
                   <td style={styles.td}>{new Date(s.created_at).toLocaleString("pt-BR")}</td>
                 </tr>
               ))}

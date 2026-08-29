@@ -16,6 +16,8 @@ import ExpedicaoPage from "./pages/ExpedicaoPage";
 import InventarioPage from "./pages/InventarioPage";
 import FiscalPage from "./pages/FiscalPage";
 import TransportadorasPage from "./pages/TransportadorasPage";
+import VeiculosPage from "./pages/VeiculosPage";
+import MotoristasPage from "./pages/MotoristasPage";
 
 function PrivateArea() {
   const { session, loading, profileLoading, subscription, profile } = useAuth();
@@ -49,6 +51,8 @@ function PrivateArea() {
             <Route path="/almoxarifados" element={<AlmoxarifadosPage />} />
             <Route path="/fornecedores" element={<FornecedoresPage />} />
             <Route path="/transportadoras" element={<TransportadorasPage />} />
+            <Route path="/veiculos" element={<VeiculosPage />} />
+            <Route path="/motoristas" element={<MotoristasPage />} />
             <Route path="/assinatura" element={<AssinaturaPage />} />
             <Route path="*" element={<Navigate to="/recebimento" replace />} />
           </>

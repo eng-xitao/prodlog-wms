@@ -14,6 +14,8 @@ const NAV = [
   { to: "/almoxarifados", label: "Almoxarifados", icon: "▥" },
   { to: "/fornecedores", label: "Fornecedores", icon: "◐" },
   { to: "/transportadoras", label: "Transportadoras", icon: "🚚" },
+  { to: "/veiculos", label: "Veículos", icon: "🚛" },
+  { to: "/motoristas", label: "Motoristas", icon: "👤" },
   { to: "/assinatura", label: "Assinatura", icon: "◈" },
 ];
 
