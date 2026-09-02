@@ -23,7 +23,7 @@ import VeiculosPage from "./pages/VeiculosPage";
 import MotoristasPage from "./pages/MotoristasPage";
 
 function PrivateArea() {
-  const { session, loading, profileLoading, subscription, productAccess, profile } = useAuth();
+  const { session, loading, profileLoading, productAccess, profile } = useAuth();
 
   if (loading || profileLoading) {
     return <div style={{ padding: 40 }}>Carregando...</div>;
@@ -34,7 +34,9 @@ function PrivateArea() {
 
   // A equipe da plataforma pode acessar para administrar e prestar suporte.
   const isPlatformStaff = !!profile?.platform_role;
-  const isActive = isPlatformStaff || productAccess || ["active", "vitalicio"].includes(subscription?.subscription_status);
+  // A autorização do cliente vem exclusivamente do ProdCore/Supabase.
+  // Não usamos mais o status de uma assinatura local como atalho de acesso.
+  const isActive = isPlatformStaff || productAccess === true;
 
   return (
     <Layout>
