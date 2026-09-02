@@ -23,7 +23,7 @@ import VeiculosPage from "./pages/VeiculosPage";
 import MotoristasPage from "./pages/MotoristasPage";
 
 function PrivateArea() {
-  const { session, loading, profileLoading, subscription, profile } = useAuth();
+  const { session, loading, profileLoading, subscription, productAccess, profile } = useAuth();
 
   if (loading || profileLoading) {
     return <div style={{ padding: 40 }}>Carregando...</div>;
@@ -32,9 +32,9 @@ function PrivateArea() {
     return <Navigate to="/login" replace />;
   }
 
-  // Equipe da plataforma (você e seu time) nunca precisa assinar o
-  // próprio sistema — acesso total sempre, independente de plano.
-  const isActive = !!profile?.platform_role || ["active", "vitalicio"].includes(subscription?.subscription_status);
+  // A equipe da plataforma pode acessar para administrar e prestar suporte.
+  const isPlatformStaff = !!profile?.platform_role;
+  const isActive = isPlatformStaff || productAccess || ["active", "vitalicio"].includes(subscription?.subscription_status);
 
   return (
     <Layout>
