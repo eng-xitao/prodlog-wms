@@ -1,34 +1,4 @@
 import { useState } from "react";
 import { useAuth } from "../lib/AuthContext";
 
-export default function LoginPage() {
-  const { signIn } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e) {
-    e.preventDefault(); setError(""); setLoading(true);
-    const { error } = await signIn({ email, password });
-    if (error) setError("E-mail ou senha incorretos.");
-    setLoading(false);
-  }
-
-  return (
-    <div className="pl-login-shell">
-      <div className="pl-login-card">
-        <img className="pl-login-logo" src="/prodlog-logo.svg" alt="ProdLog" />
-        <div className="pl-login-system">WMS • Gestão de armazém e estoque</div>
-        <div className="pl-login-divider" />
-        <form onSubmit={handleSubmit} className="pl-login-form">
-          <label><span>E-mail</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required /></label>
-          <label><span>Senha</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required /></label>
-          {error && <div className="pl-login-error">{error}</div>}
-          <button type="submit" disabled={loading}>{loading ? "Aguarde..." : "Entrar"}</button>
-        </form>
-        <p className="pl-login-hint">Acesso integrado à plataforma ProdOS.</p>
-      </div>
-    </div>
-  );
-}
+export default function LoginPage(){const{signIn}=useAuth();const[email,setEmail]=useState("");const[password,setPassword]=useState("");const[show,setShow]=useState(false);const[error,setError]=useState("");const[loading,setLoading]=useState(false);async function handleSubmit(e){e.preventDefault();setError("");setLoading(true);const{error}=await signIn({email,password});if(error)setError("E-mail ou senha incorretos.");setLoading(false);}return <div className="pl-login-shell"><div className="pl-login-card"><img className="pl-login-logo" src="/prodlog-logo.svg" alt="ProdLog"/><div className="pl-login-system">WMS • Gestão de armazém e estoque</div><div className="pl-login-divider"/><form onSubmit={handleSubmit} className="pl-login-form"><label><span>E-mail</span><input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username" required/></label><label><span>Senha</span><div style={{position:"relative"}}><input style={{paddingRight:80,width:"100%",boxSizing:"border-box"}} type={show?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required/><button type="button" onClick={()=>setShow(v=>!v)} style={{position:"absolute",right:6,top:6,border:0,background:"transparent",color:"var(--amber)",fontWeight:700,fontSize:11,cursor:"pointer"}}>{show?"Ocultar":"Visualizar"}</button></div></label>{error&&<div className="pl-login-error">{error}</div>}<button type="submit" disabled={loading}>{loading?"Aguarde...":"Entrar"}</button></form><p className="pl-login-hint">Acesso integrado à plataforma ProdOS.</p></div></div>}
