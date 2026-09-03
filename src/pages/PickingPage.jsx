@@ -1,95 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect,useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../lib/AuthContext";
-
-const STATUS_LABEL = { pendente: "Pendente", separando: "Separando", separado: "Separado", expedido: "Expedido", cancelado: "Cancelado" };
-const STATUS_COLOR = { pendente: "var(--amber)", separando: "#2563EB", separado: "var(--green)", expedido: "var(--text-dim)", cancelado: "var(--red)" };
-
-export default function PickingPage() {
-  const { company } = useAuth();
-  const [customers, setCustomers] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [customerId, setCustomerId] = useState("");
-  const [items, setItems] = useState([{ productId: "", quantity: "" }]);
-  const [saving, setSaving] = useState(false);
-  const [actionId, setActionId] = useState(null);
-
-  async function loadAll() {
-    setLoading(true); setError("");
-    try {
-      const [{ data: cust, error: e1 }, { data: prod, error: e2 }, { data: ords, error: e3 }] = await Promise.all([
-        supabase.from("customers").select("id, code, name").order("name"),
-        supabase.from("products").select("id, sku, name, unit").order("name"),
-        supabase.from("wms_orders").select("id, code, status, created_at, customers:customer_id (name), wms_order_items (id, product_id, quantity, quantity_picked, products:product_id (sku, name, unit))").in("status", ["pendente", "separando", "separado"]).order("created_at", { ascending: false }).limit(50),
-      ]);
-      const firstError = e1 || e2 || e3;
-      if (firstError) throw firstError;
-      setCustomers(cust ?? []); setProducts(prod ?? []); setOrders(ords ?? []);
-    } catch (err) { setError("Não foi possível carregar a tela: " + (err.message ?? "erro desconhecido")); }
-    finally { setLoading(false); }
-  }
-
-  useEffect(() => { if (company?.id) loadAll(); }, [company?.id]);
-  function updateItem(i, field, value) { setItems((prev) => prev.map((it, idx) => idx === i ? { ...it, [field]: value } : it)); }
-  function addItemRow() { setItems((prev) => [...prev, { productId: "", quantity: "" }]); }
-  function removeItemRow(i) { setItems((prev) => prev.filter((_, idx) => idx !== i)); }
-
-  async function handleCreate(e) {
-    e.preventDefault(); setError("");
-    const validItems = items.filter((it) => it.productId && Number(it.quantity) > 0);
-    if (!company?.id || validItems.length === 0) { setError("Adicione pelo menos um item com quantidade."); return; }
-    setSaving(true);
-    try {
-      const { data: code, error: codeError } = await supabase.rpc("next_wms_order_code", { p_company_id: company.id });
-      if (codeError) throw codeError;
-      const { data: order, error: orderError } = await supabase.from("wms_orders").insert({ company_id: company.id, code, customer_id: customerId || null }).select("id").single();
-      if (orderError) throw orderError;
-      const { error: itemsError } = await supabase.from("wms_order_items").insert(validItems.map((it) => ({ company_id: company.id, order_id: order.id, product_id: it.productId, quantity: Number(it.quantity), quantity_picked: 0 })));
-      if (itemsError) { await supabase.from("wms_orders").delete().eq("id", order.id); throw itemsError; }
-      setCustomerId(""); setItems([{ productId: "", quantity: "" }]); await loadAll();
-    } catch (err) { setError("Não foi possível criar o pedido: " + (err.message ?? "erro desconhecido")); }
-    finally { setSaving(false); }
-  }
-
-  async function setItemPicked(item, orderId, allItems) {
-    setError(""); setActionId(item.id);
-    try {
-      const requested = Number(item.quantity);
-      const picked = Number(item.quantity_picked || 0);
-      const remaining = requested - picked;
-      if (remaining <= 0) return;
-      const { data: levels, error: stockError } = await supabase.from("stock_levels").select("quantity").eq("company_id", company.id).eq("product_id", item.product_id);
-      if (stockError) throw stockError;
-      const available = (levels ?? []).reduce((sum, level) => sum + Number(level.quantity || 0), 0);
-      if (available < remaining) throw new Error(`Estoque insuficiente para ${item.products?.name || "o produto"}. Disponível: ${available}; necessário: ${remaining}.`);
-      const { error: itemError } = await supabase.from("wms_order_items").update({ quantity_picked: requested }).eq("id", item.id).eq("order_id", orderId);
-      if (itemError) throw itemError;
-      const allDone = allItems.every((it) => it.id === item.id || Number(it.quantity_picked || 0) >= Number(it.quantity));
-      const { error: orderError } = await supabase.from("wms_orders").update({ status: allDone ? "separado" : "separando" }).eq("id", orderId).in("status", ["pendente", "separando"]);
-      if (orderError) throw orderError;
-      await loadAll();
-    } catch (err) { setError(err.message ?? "Não foi possível separar o item."); }
-    finally { setActionId(null); }
-  }
-
-  return (
-    <div>
-      <header style={{ marginBottom: 20 }}><h1 style={styles.title}>Picking</h1><p style={styles.subtitle}>Crie o pedido de saída e separe os itens — quando tudo estiver separado, ele fica pronto pra expedição.</p></header>
-      {error && <div style={styles.error}>{error}</div>}
-      <form onSubmit={handleCreate} style={styles.form}>
-        <p style={styles.formTitle}>Novo pedido</p>
-        <select style={styles.input} value={customerId} onChange={(e) => setCustomerId(e.target.value)}><option value="">Cliente (opcional)...</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}</select>
-        {items.map((it, i) => <div key={i} style={styles.itemRow}><select style={styles.input} value={it.productId} onChange={(e) => updateItem(i, "productId", e.target.value)} required><option value="">Produto...</option>{products.map((p) => <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>)}</select><input style={{ ...styles.input, width: 110 }} type="number" min="0.000001" step="any" placeholder="Qtd." value={it.quantity} onChange={(e) => updateItem(i, "quantity", e.target.value)} required />{items.length > 1 && <button type="button" style={styles.removeBtn} onClick={() => removeItemRow(i)}>✕</button>}</div>)}
-        <button type="button" style={styles.addItemBtn} onClick={addItemRow}>+ Adicionar item</button>
-        <button style={styles.saveBtn} type="submit" disabled={saving}>{saving ? "Salvando..." : "Criar pedido"}</button>
-      </form>
-      <h2 style={styles.title2}>Pedidos em aberto</h2>
-      {loading ? <p style={styles.dim}>Carregando...</p> : orders.length === 0 ? <p style={styles.dim}>Nenhum pedido em aberto.</p> : <div style={styles.list}>{orders.map((o) => <div key={o.id} style={styles.card}><div style={styles.cardHeader}><span style={styles.recCode}>{o.code}</span><span style={{ ...styles.statusBadge, color: STATUS_COLOR[o.status] }}>{STATUS_LABEL[o.status]}</span></div><p style={styles.dim}>{o.customers?.name ?? "Sem cliente"}</p><ul style={styles.itemsList}>{o.wms_order_items.map((it) => { const done = Number(it.quantity_picked || 0) >= Number(it.quantity); return <li key={it.id} style={styles.pickRow}><span style={done ? styles.itemDone : styles.dim}>{it.products?.sku} — {it.products?.name}: {it.quantity_picked || 0}/{it.quantity} {it.products?.unit}</span>{!done && <button style={styles.pickBtn} disabled={actionId === it.id} onClick={() => setItemPicked(it, o.id, o.wms_order_items)} type="button">{actionId === it.id ? "Validando..." : "Marcar separado"}</button>}</li>; })}</ul></div>)}</div>}
-    </div>
-  );
-}
-
-const styles = { title:{fontFamily:"var(--font-display)",fontSize:22,margin:0},title2:{fontFamily:"var(--font-display)",fontSize:16,margin:"0 0 12px"},subtitle:{color:"var(--text-dim)",fontSize:13,margin:"6px 0 0"},dim:{color:"var(--text-dim)",fontSize:12.5},itemDone:{color:"var(--green)",fontSize:12.5,textDecoration:"line-through"},form:{display:"flex",flexDirection:"column",gap:12,background:"var(--panel)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:20,marginBottom:28,maxWidth:680},formTitle:{fontSize:13,fontWeight:700,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:"0.04em",margin:"0 0 4px"},itemRow:{display:"flex",gap:8},input:{flex:1,minWidth:140,background:"var(--panel-2)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"9px 10px",color:"var(--text)",fontSize:13},removeBtn:{background:"transparent",border:"1px solid var(--line)",color:"var(--red)",borderRadius:"var(--radius)",width:36,cursor:"pointer"},addItemBtn:{alignSelf:"flex-start",background:"transparent",border:"none",color:"var(--amber)",fontSize:12.5,fontWeight:700,cursor:"pointer",padding:0},saveBtn:{background:"var(--amber)",color:"#FFFFFF",border:"none",borderRadius:"var(--radius)",padding:"10px 0",fontWeight:700,fontSize:13,cursor:"pointer",marginTop:6},list:{display:"flex",flexDirection:"column",gap:12,maxWidth:680},card:{background:"var(--panel)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:16},cardHeader:{display:"flex",justifyContent:"space-between",marginBottom:4},recCode:{fontWeight:700,fontSize:14},statusBadge:{fontSize:12,fontWeight:700},itemsList:{margin:"8px 0 0",paddingLeft:0,listStyle:"none",display:"flex",flexDirection:"column",gap:6},pickRow:{display:"flex",justifyContent:"space-between",alignItems:"center"},pickBtn:{background:"var(--green)",color:"#FFFFFF",border:"none",borderRadius:"var(--radius)",padding:"4px 10px",fontSize:11.5,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"},error:{background:"rgba(217,105,95,0.12)",border:"1px solid var(--red)",color:"var(--red)",borderRadius:"var(--radius)",padding:"10px 12px",fontSize:13,marginBottom:16,maxWidth:680}};
+const STATUS_LABEL={pendente:"Pendente",separando:"Separando",separado:"Separado",expedido:"Expedido",cancelado:"Cancelado"};const STATUS_COLOR={pendente:"var(--amber)",separando:"#2563EB",separado:"var(--green)",expedido:"var(--text-dim)",cancelado:"var(--red)"};
+export default function PickingPage(){const{company}=useAuth();const[customers,setCustomers]=useState([]);const[products,setProducts]=useState([]);const[orders,setOrders]=useState([]);const[loading,setLoading]=useState(true);const[error,setError]=useState("");const[customerId,setCustomerId]=useState("");const[items,setItems]=useState([{productId:"",quantity:""}]);const[saving,setSaving]=useState(false);const[actionId,setActionId]=useState(null);
+async function loadAll(){setLoading(true);setError("");try{const[{data:c,error:e1},{data:p,error:e2},{data:o,error:e3}]=await Promise.all([supabase.from("customers").select("id, code, name").order("name"),supabase.from("products").select("id, sku, name, unit").order("name"),supabase.from("wms_orders").select("id, code, status, source, sales_order_id, created_at, customers:customer_id (name), wms_order_items (id, product_id, quantity, quantity_picked, products:product_id (sku, name, unit))").in("status",["pendente","separando","separado"]).order("created_at",{ascending:false}).limit(50)]);const e=e1||e2||e3;if(e)throw e;setCustomers(c??[]);setProducts(p??[]);setOrders(o??[])}catch(err){setError("Não foi possível carregar a tela: "+(err.message??"erro desconhecido"))}finally{setLoading(false)}}useEffect(()=>{if(company?.id)loadAll()},[company?.id]);
+function updateItem(i,f,v){setItems(p=>p.map((x,n)=>n===i?{...x,[f]:v}:x))}function addItemRow(){setItems(p=>[...p,{productId:"",quantity:""}])}function removeItemRow(i){setItems(p=>p.filter((_,n)=>n!==i))}
+async function handleCreate(e){e.preventDefault();setError("");const valid=items.filter(x=>x.productId&&Number(x.quantity)>0);if(!company?.id||valid.length===0){setError("Adicione pelo menos um item com quantidade.");return}const duplicated=valid.length!==new Set(valid.map(x=>x.productId)).size;if(duplicated){setError("O mesmo produto não pode ser lançado duas vezes no mesmo pedido.");return}setSaving(true);try{const{data:code,error:ce}=await supabase.rpc("next_wms_order_code",{p_company_id:company.id});if(ce)throw ce;const{data:o,error:oe}=await supabase.from("wms_orders").insert({company_id:company.id,code,customer_id:customerId||null,status:"pendente",source:"prodlog"}).select("id").single();if(oe)throw oe;const{error:ie}=await supabase.from("wms_order_items").insert(valid.map(x=>({company_id:company.id,order_id:o.id,product_id:x.productId,quantity:Number(x.quantity),quantity_picked:0})));if(ie){await supabase.from("wms_orders").delete().eq("id",o.id);throw ie}setCustomerId("");setItems([{productId:"",quantity:""}]);await loadAll()}catch(err){setError("Não foi possível criar o pedido: "+(err.message??"erro desconhecido"))}finally{setSaving(false)}}
+async function setItemPicked(item,orderId,allItems){setError("");setActionId(item.id);try{const requested=Number(item.quantity);const picked=Number(item.quantity_picked||0);const remaining=requested-picked;if(remaining<=0)return;const{data:levels,error:se}=await supabase.from("stock_levels").select("quantity").eq("company_id",company.id).eq("product_id",item.product_id);if(se)throw se;const available=(levels??[]).reduce((s,l)=>s+Number(l.quantity||0),0);if(available<remaining)throw new Error(`Estoque insuficiente para ${item.products?.name||"o produto"}. Disponível: ${available}; necessário: ${remaining}.`);const{error:ie}=await supabase.from("wms_order_items").update({quantity_picked:requested}).eq("id",item.id).eq("order_id",orderId).eq("company_id",company.id);if(ie)throw ie;const allDone=allItems.every(it=>it.id===item.id||Number(it.quantity_picked||0)>=Number(it.quantity));const{error:oe}=await supabase.from("wms_orders").update({status:allDone?"separado":"separando"}).eq("id",orderId).eq("company_id",company.id).in("status",["pendente","separando"]);if(oe)throw oe;await loadAll()}catch(err){setError(err.message??"Não foi possível separar o item.")}finally{setActionId(null)}}
+return <div><header style={{marginBottom:20}}><h1 style={styles.title}>Picking / Separação</h1><p style={styles.subtitle}>Separe somente dentro da quantidade solicitada e com estoque disponível.</p></header>{error&&<div style={styles.error}>{error}</div>}<form onSubmit={handleCreate} style={styles.form}><p style={styles.formTitle}>Novo pedido de saída</p><select style={styles.input} value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value="">Cliente (opcional)...</option>{customers.map(c=><option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}</select>{items.map((it,i)=><div key={i} style={styles.itemRow}><select style={styles.input} value={it.productId} onChange={e=>updateItem(i,"productId",e.target.value)} required><option value="">Produto...</option>{products.map(p=><option key={p.id} value={p.id}>{p.sku} — {p.name}</option>)}</select><input style={{...styles.input,width:110}} type="number" min="0.000001" step="any" placeholder="Qtd." value={it.quantity} onChange={e=>updateItem(i,"quantity",e.target.value)} required/>{items.length>1&&<button type="button" style={styles.removeBtn} onClick={()=>removeItemRow(i)}>✕</button>}</div>)}<button type="button" style={styles.addItemBtn} onClick={addItemRow}>+ Adicionar item</button><button style={styles.saveBtn} type="submit" disabled={saving}>{saving?"Salvando...":"Criar pedido"}</button></form><h2 style={styles.title2}>Pedidos em aberto</h2>{loading?<p style={styles.dim}>Carregando...</p>:orders.length===0?<p style={styles.dim}>Nenhum pedido em aberto.</p>:<div style={styles.list}>{orders.map(o=><div key={o.id} style={styles.card}><div style={styles.cardHeader}><span style={styles.recCode}>{o.code}</span><span style={{...styles.statusBadge,color:STATUS_COLOR[o.status]}}>{STATUS_LABEL[o.status]}</span></div><p style={styles.dim}>{o.customers?.name??"Sem cliente"} · Origem: <strong>{o.source==="prodos"?"ProdOS":"ProdLog"}</strong></p><ul style={styles.itemsList}>{(o.wms_order_items??[]).map(it=>{const done=Number(it.quantity_picked||0)>=Number(it.quantity);return <li key={it.id} style={styles.pickRow}><span style={done?styles.itemDone:styles.dim}>{it.products?.sku} — {it.products?.name}: {it.quantity_picked||0}/{it.quantity} {it.products?.unit}</span>{!done&&<button style={styles.pickBtn} disabled={actionId===it.id} onClick={()=>setItemPicked(it,o.id,o.wms_order_items)} type="button">{actionId===it.id?"Validando...":"Marcar separado"}</button>}</li>})}</ul></div>)}</div>}</div>}
+const styles={title:{fontFamily:"var(--font-display)",fontSize:22,margin:0},title2:{fontFamily:"var(--font-display)",fontSize:16,margin:"0 0 12px"},subtitle:{color:"var(--text-dim)",fontSize:13,margin:"6px 0 0"},dim:{color:"var(--text-dim)",fontSize:12.5},itemDone:{color:"var(--green)",fontSize:12.5,textDecoration:"line-through"},form:{display:"flex",flexDirection:"column",gap:12,background:"var(--panel)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:20,marginBottom:28,maxWidth:680},formTitle:{fontSize:13,fontWeight:700,color:"var(--text-dim)",textTransform:"uppercase",letterSpacing:".04em",margin:"0 0 4px"},itemRow:{display:"flex",gap:8},input:{flex:1,minWidth:140,background:"var(--panel-2)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:"9px 10px",color:"var(--text)",fontSize:13},removeBtn:{background:"transparent",border:"1px solid var(--line)",color:"var(--red)",borderRadius:"var(--radius)",width:36,cursor:"pointer"},addItemBtn:{alignSelf:"flex-start",background:"transparent",border:"none",color:"var(--amber)",fontSize:12.5,fontWeight:700,cursor:"pointer",padding:0},saveBtn:{background:"var(--amber)",color:"#fff",border:"none",borderRadius:"var(--radius)",padding:"10px 0",fontWeight:700,fontSize:13,cursor:"pointer",marginTop:6},list:{display:"flex",flexDirection:"column",gap:12,maxWidth:760},card:{background:"var(--panel)",border:"1px solid var(--line)",borderRadius:"var(--radius)",padding:16},cardHeader:{display:"flex",justifyContent:"space-between",marginBottom:4},recCode:{fontWeight:700,fontSize:14},statusBadge:{fontSize:12,fontWeight:700},itemsList:{margin:"8px 0 0",paddingLeft:0,listStyle:"none",display:"flex",flexDirection:"column",gap:6},pickRow:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8},pickBtn:{background:"var(--green)",color:"#fff",border:"none",borderRadius:"var(--radius)",padding:"4px 10px",fontSize:11.5,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"},error:{background:"var(--red-dim)",border:"1px solid var(--red)",color:"var(--red)",borderRadius:"var(--radius)",padding:"10px 12px",fontSize:13,marginBottom:16,maxWidth:760}};
