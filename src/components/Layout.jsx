@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 
-const NAV = [
-  ["/recebimento", "Recebimento", "◆"], ["/estoque", "Níveis de Estoque", "▤"], ["/localizacoes", "Endereçamento", "▦"],
-  ["/movimentacoes", "Movimentações", "⇄"], ["/picking", "Picking", "☑"], ["/expedicao", "Expedição", "▶"],
-  ["/mdfe", "MDF-e (Manifesto)", "📋"], ["/inventario", "Inventário", "◎"], ["/fiscal", "Fiscal / NF-e", "🧾"],
-  ["/cte", "CT-e", "📄"], ["/tabela-frete", "Tabela de Frete", "💰"], ["/produtos", "Produtos", "◆"],
-  ["/almoxarifados", "Almoxarifados", "▥"], ["/fornecedores", "Fornecedores", "◐"], ["/transportadoras", "Transportadoras", "🚚"],
-  ["/veiculos", "Veículos", "🚛"], ["/motoristas", "Motoristas", "👤"], ["/assinatura", "Assinatura", "◈"],
+const NAV_GROUPS = [
+  { label: "Operação", icon: "◆", items: [["/recebimento", "Recebimento", "◆"], ["/picking", "Picking / Separação", "☑"], ["/expedicao", "Expedição", "▶"], ["/inventario", "Inventário", "◎"]] },
+  { label: "Estoque", icon: "▥", items: [["/estoque", "Níveis de Estoque", "▤"], ["/localizacoes", "Endereçamento", "▦"], ["/movimentacoes", "Movimentações", "⇄"]] },
+  { label: "Transporte", icon: "🚛", items: [["/tabela-frete", "Tabela de Frete", "💰"], ["/transportadoras", "Transportadoras", "🚚"], ["/veiculos", "Veículos", "🚛"], ["/motoristas", "Motoristas", "👤"]] },
+  { label: "Documentos Fiscais", icon: "🧾", items: [["/fiscal", "NF-e / Fiscal", "🧾"], ["/cte", "CT-e", "📄"], ["/mdfe", "MDF-e / Manifestos", "📋"]] },
+  { label: "Cadastros", icon: "▣", items: [["/produtos", "Produtos", "◆"], ["/almoxarifados", "Almoxarifados", "▥"], ["/fornecedores", "Fornecedores", "◐"]] },
+  { label: "Conta", icon: "◈", items: [["/assinatura", "Assinatura", "◈"]] },
 ];
 
 export default function Layout({ children }) {
@@ -17,6 +17,7 @@ export default function Layout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [openGroup, setOpenGroup] = useState("Operação");
 
   useEffect(() => {
     const updateViewport = () => {
@@ -52,11 +53,28 @@ export default function Layout({ children }) {
           <button className="pl-collapse-button no-print" onClick={toggleMenu} type="button" aria-label={collapsed ? "Expandir menu" : "Recolher menu"}>{collapsed ? "»" : "«"}</button>
         </div>
         <nav className="pl-nav">
-          {NAV.map(([to, label, icon]) => (
-            <NavLink key={to} to={to} title={collapsed ? label : undefined} className={({ isActive }) => `pl-nav-item ${isActive ? "active" : ""}`} onClick={() => isMobile && setMobileOpen(false)}>
-              <span className="pl-nav-icon">{icon}</span><span className="pl-nav-label">{label}</span>
-            </NavLink>
-          ))}
+          {NAV_GROUPS.map((group) => {
+            const groupActive = group.items.some(([to]) => window.location.pathname === to);
+            const isOpen = openGroup === group.label;
+            return (
+              <div className="pl-nav-group" key={group.label}>
+                <button className={`pl-nav-group-title ${groupActive ? "active" : ""}`} type="button" title={collapsed ? group.label : undefined} onClick={() => !collapsed && setOpenGroup(isOpen ? "" : group.label)}>
+                  <span className="pl-nav-icon">{group.icon}</span>
+                  <span className="pl-nav-label">{group.label}</span>
+                  {!collapsed && <span className="pl-nav-chevron">{isOpen ? "⌄" : "›"}</span>}
+                </button>
+                {!collapsed && isOpen && (
+                  <div className="pl-nav-submenu">
+                    {group.items.map(([to, label, icon]) => (
+                      <NavLink key={to} to={to} className={({ isActive }) => `pl-nav-item pl-nav-subitem ${isActive ? "active" : ""}`} onClick={() => isMobile && setMobileOpen(false)}>
+                        <span className="pl-nav-icon">{icon}</span><span className="pl-nav-label">{label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
         <div className="pl-user">
           <div className="pl-user-name" title={profile?.full_name ?? profile?.email}>{profile?.full_name ?? profile?.email}</div>
