@@ -8,7 +8,7 @@ const NAV_GROUPS = [
   { label: "Estoque", icon: "▥", items: [["/estoque", "Níveis de Estoque", "▤"], ["/localizacoes", "Endereçamento", "▦"], ["/movimentacoes", "Movimentações", "⇄"]] },
   { label: "Transporte", icon: "🚛", items: [["/tabela-frete", "Tabela de Frete", "💰"], ["/transportadoras", "Transportadoras", "🚚"], ["/veiculos", "Veículos", "🚛"], ["/motoristas", "Motoristas", "👤"]] },
   { label: "Documentos Fiscais", icon: "🧾", items: [["/fiscal", "NF-e / Fiscal", "🧾"], ["/cte", "CT-e", "📄"], ["/mdfe", "MDF-e / Manifestos", "📋"]] },
-  { label: "Cadastros", icon: "▣", items: [["/produtos", "Produtos", "◆"], ["/almoxarifados", "Almoxarifados", "▥"], ["/fornecedores", "Fornecedores", "◐"]] },
+  { label: "Cadastros", icon: "▣", items: [["/produtos", "Produtos", "◆"], ["/almoxarifados", "Almoxarifados", "▥"], ["/fornecedores", "Fornecedores", "◐"], ["/clientes", "Clientes", "◎"]] },
   { label: "Conta", icon: "◈", items: [["/assinatura", "Assinatura", "◈"]] },
 ];
 
