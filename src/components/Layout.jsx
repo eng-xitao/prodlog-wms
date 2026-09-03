@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 
 const NAV_GROUPS = [
@@ -14,10 +14,16 @@ const NAV_GROUPS = [
 export default function Layout({ children }) {
   const { profile, signOut, impersonation, stopImpersonating } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [openGroup, setOpenGroup] = useState("Operação");
+
+  useEffect(() => {
+    const activeGroup = NAV_GROUPS.find((group) => group.items.some(([to]) => location.pathname === to));
+    if (activeGroup) setOpenGroup(activeGroup.label);
+  }, [location.pathname]);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -54,19 +60,19 @@ export default function Layout({ children }) {
         </div>
         <nav className="pl-nav">
           {NAV_GROUPS.map((group) => {
-            const groupActive = group.items.some(([to]) => window.location.pathname === to);
+            const groupActive = group.items.some(([to]) => location.pathname === to);
             const isOpen = openGroup === group.label;
             return (
               <div className="pl-nav-group" key={group.label}>
-                <button className={`pl-nav-group-title ${groupActive ? "active" : ""}`} type="button" title={collapsed ? group.label : undefined} onClick={() => !collapsed && setOpenGroup(isOpen ? "" : group.label)}>
+                <button className={`pl-nav-group-title ${groupActive ? "active" : ""}`} type="button" title={collapsed ? group.label : undefined} onClick={() => setOpenGroup(isOpen ? "" : group.label)}>
                   <span className="pl-nav-icon">{group.icon}</span>
                   <span className="pl-nav-label">{group.label}</span>
                   {!collapsed && <span className="pl-nav-chevron">{isOpen ? "⌄" : "›"}</span>}
                 </button>
-                {!collapsed && isOpen && (
+                {isOpen && (
                   <div className="pl-nav-submenu">
                     {group.items.map(([to, label, icon]) => (
-                      <NavLink key={to} to={to} className={({ isActive }) => `pl-nav-item pl-nav-subitem ${isActive ? "active" : ""}`} onClick={() => isMobile && setMobileOpen(false)}>
+                      <NavLink key={to} to={to} title={collapsed ? label : undefined} className={({ isActive }) => `pl-nav-item pl-nav-subitem ${isActive ? "active" : ""}`} onClick={() => isMobile && setMobileOpen(false)}>
                         <span className="pl-nav-icon">{icon}</span><span className="pl-nav-label">{label}</span>
                       </NavLink>
                     ))}
